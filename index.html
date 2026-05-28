@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYSC AI Engineering Roadmap</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --text: #e2e8f0;
+      --input-bg: #0f172a;
+      --input-border: #334155;
+      --toggle-bg: #334155;
+      --shadow: rgba(0,0,0,0.3);
+    }
+
+    /* Light Mode Overrides */
+    body.light-mode {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --success: #16a34a;
+      --text: #1e293b;
+      --input-bg: #f1f5f9;
+      --input-border: #cbd5e1;
+      --toggle-bg: #e2e8f0;
+      --shadow: rgba(0,0,0,0.1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 1rem; max-width: 800px; margin: 0 auto; transition: background 0.3s, color 0.3s; }
+    header { text-align: center; margin-bottom: 1.5rem; }
+    .progress-container { background: var(--card); border-radius: 1rem; height: 0.8rem; margin: 1rem 0; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--success); width: 0%; transition: width 0.4s ease; }
+    .controls { display: flex; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; justify-content: center; }
+    button { background: var(--primary); color: white; border: none; padding: 0.6rem 1rem; border-radius: 0.4rem; cursor: pointer; font-weight: 500; transition: opacity 0.2s; }
+    button:hover { opacity: 0.9; }
+    #themeToggle { background: var(--toggle-bg); color: var(--text); border: 1px solid var(--input-border); }
+    .task-list { display: flex; flex-direction: column; gap: 0.8rem; }
+    .task-card { background: var(--card); padding: 1rem; border-radius: 0.6rem; display: flex; flex-direction: column; gap: 0.6rem; box-shadow: 0 2px 6px var(--shadow); transition: background 0.3s, box-shadow 0.3s; }
+    .task-header { display: flex; align-items: center; gap: 0.6rem; }
+    .task-header input[type="checkbox"] { width: 1.2rem; height: 1.2rem; cursor: pointer; accent-color: var(--success); }
+    .task-header h3 { margin: 0; font-size: 1.1rem; }
+    .task-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .task-meta input { background: var(--input-bg); color: var(--text); border: 1px solid var(--input-border); padding: 0.4rem 0.6rem; border-radius: 0.3rem; transition: background 0.3s, border 0.3s; }
+    .youtube-link { color: #ef4444; text-decoration: none; font-size: 0.95rem; display: flex; align-items: center; gap: 0.3rem; }
+    .youtube-link:hover { text-decoration: underline; }
+    .completed .task-header h3 { text-decoration: line-through; opacity: 0.6; }
+    @media (max-width: 600px) { .task-meta { flex-direction: column; align-items: flex-start; } .controls { justify-content: flex-start; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🤖 NYSC AI Engineering Roadmap</h1>
+    <p>Track progress, schedule tutorials, and stay consistent.</p>
+  </header>
+
+  <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+  <p id="progressText" style="text-align:center; margin-bottom:1rem;">0% Complete</p>
+
+  <div class="controls">
+    <button id="themeToggle">🌙 Light Mode</button>
+    <button id="exportCSV">📥 Export CSV</button>
+    <button id="addTask">➕ Add Custom Task</button>
+    <button id="resetAll" style="background:#ef4444;">🗑️ Reset All</button>
+  </div>
+
+  <div class="task-list" id="taskList"></div>
+
+  <script>
+    const STORAGE_KEY = 'nysc_ai_tasks';
+    const THEME_KEY = 'theme-preference';
+    const defaultTasks = [
+      { id: 1, title: "Python Fundamentals & Data Structures", youtube: "https://www.youtube.com/watch?v=kqtD5dpn9C8", completed: false, scheduled: "" },
+      { id: 2, title: "Math for ML: Linear Algebra & Calculus", youtube: "https://www.youtube.com/watch?v=8z0kV4Y4k3Q", completed: false, scheduled: "" },
+      { id: 3, title: "Machine Learning Basics (Scikit-Learn)", youtube: "https://www.youtube.com/watch?v=7eh4d6sabA0", completed: false, scheduled: "" },
+      { id: 4, title: "Deep Learning & Neural Networks (PyTorch)", youtube: "https://www.youtube.com/watch?v=VwVg9jCCTqa", completed: false, scheduled: "" },
+      { id: 5, title: "LLMs, RAG & Prompt Engineering", youtube: "https://www.youtube.com/watch?v=2Qr5w9wJk7g", completed: false, scheduled: "" },
+      { id: 6, title: "Model Deployment & API Building (FastAPI)", youtube: "https://www.youtube.com/watch?v=9lK-a6n9K8A", completed: false, scheduled: "" }
+    ];
+
+    let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultTasks;
+
+    // 🌗 Theme Toggle Logic
+    const themeToggle = document.getElementById('themeToggle');
+    function applyTheme(theme) {
+      if (theme === 'light') {
+        document.body.classList.add('light-mode');
+        themeToggle.textContent = '☀️ Dark Mode';
+      } else {
+        document.body.classList.remove('light-mode');
+        themeToggle.textContent = '🌙 Light Mode';
+      }
+    }
+
+    // Load saved theme or respect OS preference
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme) {
+      applyTheme(savedTheme);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      applyTheme('light');
+    } else {
+      applyTheme('dark');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const current = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+      const next = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+    });
+
+    // 📦 App Logic
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      updateProgress();
+    }
+
+    function render() {
+      const container = document.getElementById('taskList');
+      container.innerHTML = '';
+      tasks.forEach(task => {
+        const card = document.createElement('div');
+        card.className = `task-card ${task.completed ? 'completed' : ''}`;
+        const [datePart, timePart] = task.scheduled ? task.scheduled.split('T') : ['', ''];
+        card.innerHTML = `
+          <div class="task-header">
+            <input type="checkbox" ${task.completed ? 'checked' : ''} data-id="${task.id}">
+            <h3>${task.title}</h3>
+          </div>
+          <div class="task-meta">
+            <input type="date" value="${datePart}" data-id="${task.id}" class="date-input">
+            <input type="time" value="${timePart}" data-id="${task.id}" class="time-input">
+            <a href="${task.youtube}" target="_blank" class="youtube-link">📺 Watch Tutorial</a>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function updateProgress() {
+      const pct = tasks.length ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0;
+      document.getElementById('progressBar').style.width = `${pct}%`;
+      document.getElementById('progressText').textContent = `${pct}% Complete`;
+    }
+
+    document.getElementById('taskList').addEventListener('change', e => {
+      if (e.target.type === 'checkbox') {
+        const id = parseInt(e.target.dataset.id);
+        tasks.find(t => t.id === id).completed = e.target.checked;
+        save(); render();
+      }
+    });
+
+    document.getElementById('taskList').addEventListener('input', e => {
+      if (e.target.classList.contains('date-input') || e.target.classList.contains('time-input')) {
+        const id = parseInt(e.target.dataset.id);
+        const task = tasks.find(t => t.id === id);
+        const d = document.querySelector(`.date-input[data-id="${id}"]`).value;
+        const t = document.querySelector(`.time-input[data-id="${id}"]`).value;
+        task.scheduled = t ? `${d}T${t}` : d;
+        save();
+      }
+    });
+
+    document.getElementById('exportCSV').addEventListener('click', () => {
+      let csv = 'ID,Title,Completed,Scheduled,Youtube Link\n';
+      tasks.forEach(t => { csv += `${t.id},"${t.title}","${t.completed?'Yes':'No'}","${t.scheduled||''}",${t.youtube}\n`; });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+      a.download = 'nysc_ai_roadmap.csv'; a.click();
+    });
+
+    document.getElementById('addTask').addEventListener('click', () => {
+      const title = prompt('Enter task title:');
+      if (!title) return;
+      const yt = prompt('Paste YouTube URL (optional):') || '';
+      tasks.push({ id: Date.now(), title, youtube: yt, completed: false, scheduled: '' });
+      save(); render();
+    });
+
+    document.getElementById('resetAll').addEventListener('click', () => {
+      if (confirm('Reset all progress and custom tasks?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        tasks = JSON.parse(JSON.stringify(defaultTasks));
+        save(); render();
+      }
+    });
+
+    render(); updateProgress();
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.error);
+    }
+  </script>
+</body>
+</html>
